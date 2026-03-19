@@ -218,9 +218,14 @@ class DeliveryCarrier(models.Model):
             )
             return carriers
 
-        # Filter carriers to only those using an offered packaging
+        # Filter carriers to only those using an offered packaging.
+        # Carriers with no fedex_default_product_packaging_id (e.g. Fixed Price,
+        # USPS, or any non-FedEx provider) are always passed through — the
+        # packaging filter only applies to carriers that explicitly declare a
+        # box type.
         offered_carriers = carriers.filtered(
-            lambda c: c.fedex_default_product_packaging_id in offered_packagings
+            lambda c: not c.fedex_default_product_packaging_id
+                      or c.fedex_default_product_packaging_id in offered_packagings
         )
 
         _logger.info(
