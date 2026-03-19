@@ -157,13 +157,17 @@ class DeliveryCarrier(models.Model):
         except (ValueError, TypeError):
             upsell_steps = 1
 
-        # Sort compatible packagings by volume ascending (smallest first)
+        # Sort compatible packagings by volume ascending (smallest first).
+        # Packages missing any dimension get float('inf') so they sort to the
+        # end rather than the front (0-volume would otherwise make them appear
+        # as the "best fit" for every order).
         def _volume(pkg):
-            return (
-                (pkg.packaging_length or 0.0)
-                * (pkg.width or 0.0)
-                * (pkg.height or 0.0)
-            )
+            l = pkg.packaging_length or 0.0
+            w = pkg.width or 0.0
+            h = pkg.height or 0.0
+            if not l or not w or not h:
+                return float('inf')
+            return l * w * h
 
         sorted_packagings = sorted(compatible_packagings, key=_volume)
 
