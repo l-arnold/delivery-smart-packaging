@@ -197,13 +197,29 @@ class DeliveryCarrier(models.Model):
         """
         carriers = super().available_carriers(partner)
 
-        # Resolve the order from context or partner fallback
+        # Resolve the order from context (preferred) or partner fallback.
+        # The context order_id is set by sale_order._get_delivery_methods()
+        # and should always be present for website checkout calls.
         order = self.env.context.get('order_id')
+        _logger.info(
+            f"available_carriers: context order_id = "
+            f"{order.id if order else None}"
+        )
+
         if not order and isinstance(partner, models.Model):
+            # Fallback: find the most recent draft order for this partner.
+            # Sort by id desc to get the newest order, avoiding stale orders
+            # from other websites/companies being picked up by limit=1.
             order = self.env['sale.order'].search([
                 ('partner_id', '=', partner.id),
                 ('state', '=', 'draft'),
-            ], limit=1)
+            ], order='id desc', limit=1)
+            if order:
+                _logger.info(
+                    f"available_carriers: fallback found order "
+                    f"{order.id} (website: {order.website_id.id}, "
+                    f"company: {order.company_id.name})"
+                )
 
         if not order:
             return carriers
