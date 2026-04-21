@@ -92,7 +92,7 @@ class DeliveryCarrier(models.Model):
             product.packaging recordset of compatible packagings
         """
         products = order.order_line.mapped('product_id').filtered(
-            lambda p: p.type == 'product'
+            lambda p: p.type in ('product', 'consu')
         )
 
         if not products:
